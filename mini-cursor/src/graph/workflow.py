@@ -43,3 +43,31 @@ def engineer_wrapper(state: AgentState):
     state["current_file"] = remaining_files[0]
     return engineer_node(state)
 
+# ---3 Graph ----
+workflow = StateGraph(AgentState)
+
+workflow.add_node("architect", architect_node)
+workflow.add_node("engineer", engineer_wrapper)
+
+# --- Add Edges
+workflow.set_entry_point("architect")
+
+workflow.add_conditional_edges(
+    "architect",
+    check_next_step,
+    {
+        "engineer": "engineer",
+        END: END
+    }
+)
+
+workflow.add_conditional_edges(
+    "engineer",
+    check_next_step,
+    {
+        "engineer": "engineer",
+        END: END
+    }
+)
+
+app = workflow.compile()
