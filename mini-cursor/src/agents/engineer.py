@@ -31,17 +31,15 @@ requirements_prompt = ChatPromptTemplate.from_messages([
     YOUR JOB: Write the 'requirements.txt' file.
     
     RULES:
-    1. Output ONLY the list of library names (one per line).
-    2. DO NOT write python code (no `open()`, no `write()`).
-    3. DO NOT use markdown.
-    4. Just the package names.
+    1. Output ONLY package names, one per line.
+    2. NO markdown, NO code, NO explanations.
+    3. Common packages: requests, flask, django, numpy, pandas, pillow, pygame
     
     Example Output:
-    pandas
-    numpy
-    qrcode
+    requests
+    flask
     """),
-    ("user", "Write the requirements for task: {task}")
+    ("user", "What packages does this task need: {task}")
 ])
 
 # C. Python Fix Prompt (For .py files)
@@ -76,10 +74,22 @@ requirements_fix_prompt = ChatPromptTemplate.from_messages([
 ])
 
 def _clean_code(text: str) -> str:
-    # Strip markdown code blocks
     text = re.sub(r"^```\w*", "", text, flags=re.MULTILINE)
     text = re.sub(r"```$", "", text, flags=re.MULTILINE)
     return text.strip()
+
+def _extract_package_names(text: str) -> list:
+    """Extract valid package names from LLM output"""
+    lines = text.strip().split('\n')
+    packages = []
+    for line in lines:
+        line = line.strip().strip('-').strip()
+        line = re.sub(r'^(pip install|requirements:?\s*)', '', line, flags=re.IGNORECASE)
+        line = re.sub(r'[>=<~!].*$', '', line)
+        line = line.strip()
+        if line and re.match(r'^[a-zA-Z][a-zA-Z0-9_-]*$', line):
+            packages.append(line)
+    return packages
 
 # --- 3. THE NODE ---
 def engineer_node(state: AgentState):

@@ -1,26 +1,28 @@
 import subprocess
-import subprocess
 import shlex
+import os
 
-ALLOWED_COMMANDS = {"python", "pip", "ls","mkdir", "echo", "cat"}
+ALLOWED_BASE = {"python3", "python", "pip3", "pip", "ls", "mkdir", "echo", "cat", ".venv"}
 
 def execute_shell_command(command_str: str) -> str:
-    """
-    Executes a shell command in the workspace directory
-    Capture stdout and stderr for self-healing.
-    """
-
     try:
         args = shlex.split(command_str)
-        if not args or args[0] not in ALLOWED_COMMANDS:
-            return f"SECURITY ERROR: Command '{args[0]}' is not allowed. Allowed: {ALLOWED_COMMANDS}"
+        if not args:
+            return "ERROR: Empty command"
+        
+        cmd = args[0]
+        if cmd.startswith(".venv"):
+            pass
+        elif cmd not in ALLOWED_BASE:
+            return f"SECURITY ERROR: Command '{cmd}' not allowed"
         
         result = subprocess.run(
-            args,
+            command_str,
+            shell=True,
             capture_output=True,
             text=True,
             cwd="workspace",
-            timeout=30
+            timeout=60
         )
         if result.returncode == 0:
             return f"COMMAND SUCCESS:\n{result.stdout}"
@@ -28,6 +30,6 @@ def execute_shell_command(command_str: str) -> str:
             return f"COMMAND FAILED (Code {result.returncode})\nSTDERR:{result.stderr}"
         
     except subprocess.TimeoutExpired:
-        return "ERROR: Command timed out after 30 seconds."
+        return "ERROR: Command timed out after 60 seconds."
     except Exception as e:
         return f"SYSTEM ERROR: {str(e)}"
